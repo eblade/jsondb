@@ -12,7 +12,7 @@ logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
 @pytest.fixture(scope='function')
 def db():
-    db = Database(root=tempfile.mkdtemp(prefix='jsondb-'))
+    db = jsondb.Database(root=tempfile.mkdtemp(prefix='jsondb-'))
     yield db
     del db
 
