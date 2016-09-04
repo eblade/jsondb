@@ -29,6 +29,8 @@ setup(
     download_url=('https://github.com/eblade/%s/archive/v%s.tar.gz'
                   % (name_, version_)),
     packages=packages_,
-    install_requires=[],
+    install_requires=[
+        'sortedcontainers',
+    ],
     classifiers=classifiers,
 )
