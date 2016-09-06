@@ -21,7 +21,7 @@ class Database:
         self.lock = threading.Lock()
         self._setup()
 
-    def __del__(self):
+    def destroy(self):
         logging.debug('Destroying JsonDB at %s', self.root)
         with self.lock:
             if self.root:
@@ -132,13 +132,43 @@ class Database:
                             count += 1
             logging.info("Read %i objects.", count)
 
-    def view(self, view_name, key=None):
+    def view(self, view_name, key=any, startkey=None, endkey=any, expand=False):
+        if key is not any and None not in (startkey, endkey):
+            raise ValueError('Either key or startkey/endkey valid')
+
+        if isinstance(startkey, tuple):
+            startkey = tuple(Comparable(x) for x in startkey)
+        else:
+            startkey = Comparable(startkey),
+
+        if isinstance(endkey, tuple):
+            endkey = tuple(Comparable(x) for x in endkey)
+        else:
+            endkey = Comparable(endkey),
+
         with self.lock:
-            for v in self._view_data[view_name].values():
+            for k, v in self._view_data[view_name].items():
                 if v is None:
                     continue
-                for d in v:
-                    yield d
+
+                if key is not any:
+                    if key == k:
+                        for d in v:
+                            yield d
+
+                else:
+                    if isinstance(k, tuple):
+                        k = tuple(Comparable(x) for x in k)
+                    else:
+                        k = Comparable(k),
+
+                    if k < startkey:
+                        continue
+                    elif k > endkey:
+                        raise StopIteration
+
+                    for d in v:
+                        yield d
 
     def _review(self, o, delete=False, add=False, views=all):
         id = o['_id']
@@ -185,3 +215,47 @@ class Database:
 
 class Conflict(Exception):
     pass
+
+
+class Comparable:
+    def __init__(self, v):
+        self.v = v
+
+    def __repr__(self):
+        return '<%s>' % repr(self.v)
+
+    def __lt__(self, other):
+        if self.v is any and other.v is any:
+            return False
+        elif self.v is any:
+            return False
+        elif other.v is any:
+            return True
+        elif self.v is None and other.v is None:
+            return False
+        elif self.v is None:
+            return True
+        elif other.v is None:
+            return False
+        try:
+            return self.v < other.v
+        except TypeError:
+            return str(self.v) < str(other.v)
+
+    def __le__(self, other):
+        if self.v is any and other.v is any:
+            return True
+        elif self.v is any:
+            return False
+        elif other.v is any:
+            return True
+        elif self.v is None and other.v is None:
+            return True
+        elif self.v is None:
+            return True
+        elif other.v is None:
+            return False
+        try:
+            return self.v <= other.v
+        except TypeError:
+            return str(self.v) <= str(other.v)

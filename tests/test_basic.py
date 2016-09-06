@@ -14,7 +14,7 @@ logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 def db():
     db = jsondb.Database(root=tempfile.mkdtemp(prefix='jsondb-'))
     yield db
-    del db
+    db.destroy()
 
 
 def test_init(db):
@@ -138,3 +138,35 @@ def test_view_kickstart(db):
     assert r[0] == {'id': 2, 'key': 1, 'value': 11}
     assert r[1] == {'id': 0, 'key': 2, 'value': 22}
     assert r[2] == {'id': 1, 'key': 3, 'value': 33}
+
+
+def test_view_by_key(db):
+    db.add({'a': 2, 'b': 22})
+    db.add({'a': 3, 'b': 33})
+    db.add({'a': 1, 'b': 11})
+    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    r = list(db.view('b_by_a', key=2))[0]
+    assert r is not None
+    assert r == {'id': 0, 'key': 2, 'value': 22}
+
+
+def test_view_by_startkey(db):
+    db.add({'a': 2, 'b': 22})
+    db.add({'a': 3, 'b': 33})
+    db.add({'a': 1, 'b': 11})
+    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    r = list(db.view('b_by_a', startkey=2))
+    assert len(r) == 2
+    assert r[0] == {'id': 0, 'key': 2, 'value': 22}
+    assert r[1] == {'id': 1, 'key': 3, 'value': 33}
+
+
+def test_view_by_endkey(db):
+    db.add({'a': 2, 'b': 22})
+    db.add({'a': 3, 'b': 33})
+    db.add({'a': 1, 'b': 11})
+    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    r = list(db.view('b_by_a', endkey=2))
+    assert len(r) == 2
+    assert r[0] == {'id': 2, 'key': 1, 'value': 11}
+    assert r[1] == {'id': 0, 'key': 2, 'value': 22}
