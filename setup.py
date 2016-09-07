@@ -30,7 +30,6 @@ setup(
                   % (name_, version_)),
     packages=packages_,
     install_requires=[
-        'https://github.com/eblade/blist/archive/master.zip',
     ],
     classifiers=classifiers,
 )
