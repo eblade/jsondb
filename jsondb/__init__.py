@@ -5,7 +5,7 @@ import json
 import threading
 import shutil
 import logging
-import sortedcontainers
+import blist
 
 
 class Database:
@@ -110,17 +110,17 @@ class Database:
         with self.lock:
             self._view_function[view_name] = fn
             self._view_data[view_name] = \
-                sortedcontainers.SortedDict()
+                blist.sortedlist(key=view_key)
         self.reindex(views=[view_name])
 
     def reindex(self, views=all):
         with self.lock:
             logging.info("Generating views...")
             count = 0
-            for name in self._view_function.keys():
+            for name in sorted(self._view_function.keys()):
                 if views is all or name in views:
                     self._view_data[name] = \
-                        sortedcontainers.SortedDict()
+                        blist.sortedlist(key=view_key)
             for r, ds, fs in os.walk(self._object_folder):
                 for f in fs:
                     if f.endswith('.json'):
@@ -136,39 +136,37 @@ class Database:
         if key is not any and None not in (startkey, endkey):
             raise ValueError('Either key or startkey/endkey valid')
 
-        if isinstance(startkey, tuple):
-            startkey = tuple(Comparable(x) for x in startkey)
-        else:
-            startkey = Comparable(startkey),
-
-        if isinstance(endkey, tuple):
-            endkey = tuple(Comparable(x) for x in endkey)
-        else:
-            endkey = Comparable(endkey),
-
         with self.lock:
-            for k, v in self._view_data[view_name].items():
-                if v is None:
-                    continue
+            view_data = self._view_data[view_name]
 
-                if key is not any:
-                    if key == k:
-                        for d in v:
-                            yield d
+            if key is not any:
+                key = {'key': key}
+                startindex = view_data.index(key)
+                key_ref = view_key(key)
+                endindex = None
 
+            else:
+                if startkey is None:
+                    startindex = 0
+                elif startkey is any:
+                    startindex = len(view_data)
                 else:
-                    if isinstance(k, tuple):
-                        k = tuple(Comparable(x) for x in k)
-                    else:
-                        k = Comparable(k),
+                    startkey = {'key': startkey}
+                    startindex = view_data.index(startkey)
 
-                    if k < startkey:
-                        continue
-                    elif k > endkey:
-                        raise StopIteration
+                if endkey is None:
+                    endindex = 0
+                elif endkey is any:
+                    endindex = len(view_data)
+                else:
+                    endkey = {'key': endkey}
+                    endindex = view_data.index(endkey) + 1
 
-                    for d in v:
-                        yield d
+            for v in view_data[startindex:endindex]:
+                if key is not any:
+                    if key_ref != view_key(v):
+                        break
+                yield v
 
     def _review(self, o, delete=False, add=False, views=all):
         id = o['_id']
@@ -178,43 +176,43 @@ class Database:
             try:
                 view_data = self._view_data[name]
             except KeyError:
-                view_data = sortedcontainers.SortedDict()
+                view_data = blist.sortedlist(key=view_key)
                 self._view_data[name] = view_data
 
             if delete:
-                to_none = []
-                for k, v in view_data.items():
-                    to_delete = []
-                    for index, d in enumerate(v):
-                        if d['id'] == id:
-                            to_delete.append(index)
-                    if len(v) == len(to_delete):
-                        to_none.append(k)
-                    else:
-                        for index in reversed(to_delete):
-                            del v[index]
-                for k in to_none:
-                    del view_data[k]
+                to_delete = []
+                for index, v in enumerate(view_data):
+                    if v['id'] == id:
+                        to_delete.append(index)
+                for index in reversed(to_delete):
+                    del view_data[index]
 
             if add:
                 r = fn(o)
                 if r is None:
                     continue
                 for k, v in r.items():
-                    current = view_data.get(k)
                     d = {
                         'id': o['_id'],
                         'key': k,
                         'value': v,
                     }
-                    if current is None:
-                        view_data[k] = [d]
-                    else:
-                        current.append(d)
+                    view_data.add(d)
 
 
 class Conflict(Exception):
     pass
+
+
+def view_key(value):
+    return Key(value['key']), Optional(value.get('id'))
+
+
+def Key(key):
+    if isinstance(key, tuple):
+        return tuple(Comparable(x) for x in key)
+    else:
+        return key,
 
 
 class Comparable:
@@ -259,3 +257,17 @@ class Comparable:
             return self.v <= other.v
         except TypeError:
             return str(self.v) <= str(other.v)
+
+    def __eq__(self, other):
+        return self.v == other.v
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class Optional(Comparable):
+    def __eq__(self, other):
+        if self.v is None or other.v is None:
+            return True
+        else:
+            return super().__eq__(other)

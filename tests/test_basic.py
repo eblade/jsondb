@@ -145,9 +145,33 @@ def test_view_by_key(db):
     db.add({'a': 3, 'b': 33})
     db.add({'a': 1, 'b': 11})
     db.define('b_by_a', lambda o: {o['a']: o['b']})
-    r = list(db.view('b_by_a', key=2))[0]
-    assert r is not None
-    assert r == {'id': 0, 'key': 2, 'value': 22}
+    r = list(db.view('b_by_a', key=2))
+    assert len(r) == 1
+    assert r[0] == {'id': 0, 'key': 2, 'value': 22}
+
+
+def test_view_by_key_two_values_same_key_before(db):
+    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    db.add({'a': 2, 'b': 22})
+    db.add({'a': 3, 'b': 33})
+    db.add({'a': 1, 'b': 11})
+    db.add({'a': 2, 'b': 44})
+    r = list(db.view('b_by_a', key=2))
+    assert len(r) == 2
+    assert r[0] == {'id': 0, 'key': 2, 'value': 22}
+    assert r[1] == {'id': 3, 'key': 2, 'value': 44}
+
+
+def test_view_by_key_two_values_same_key_after(db):
+    db.add({'a': 2, 'b': 22})
+    db.add({'a': 3, 'b': 33})
+    db.add({'a': 1, 'b': 11})
+    db.add({'a': 2, 'b': 44})
+    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    r = list(db.view('b_by_a', key=2))
+    assert len(r) == 2
+    assert r[0] == {'id': 0, 'key': 2, 'value': 22}
+    assert r[1] == {'id': 3, 'key': 2, 'value': 44}
 
 
 def test_view_by_startkey(db):

@@ -1,1 +1,1 @@
-sortedcontainers
+https://github.com/eblade/blist/archive/master.zip
