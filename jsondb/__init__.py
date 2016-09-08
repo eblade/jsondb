@@ -194,6 +194,15 @@ class Database:
 
     def _review(self, o, delete=False, add=False, views=all):
         id = o['_id']
+
+        def create_view_data(o, row):
+            k, v = row
+            return {
+                'id': o['_id'],
+                'key': k,
+                'value': v,
+            }
+
         for name, fn in self._view_function.items():
             if views is not all and name not in views:
                 continue
@@ -212,16 +221,14 @@ class Database:
                     del view_data[index]
 
             if add:
-                r = fn(o)
-                if r is None:
+                rows = fn(o)
+                if rows is None:
                     continue
-                k, v = r
-                d = {
-                    'id': o['_id'],
-                    'key': k,
-                    'value': v,
-                }
-                view_data.add(d)
+                if hasattr(rows, '__next__'):
+                    for row in rows:
+                        view_data.add(create_view_data(o, row))
+                else:
+                    view_data.add(create_view_data(o, rows))
 
 
 class Conflict(Exception):

@@ -228,3 +228,27 @@ def test_include_docs(db):
                     'doc': {'_id': 5, '_rev': 0, '5': 15}}
     assert r[3] == {'id': 7, 'key': 7, 'value': 1,
                     'doc': {'_id': 7, '_rev': 0, '7': 17}}
+
+
+def test_yielding_mapping_function(db):
+    def yielder(o):
+        yield (o['a'], 1), o['b']
+        yield (o['a'], 2), o['b'] * 2
+        yield (o['a'], 3), o['b'] * 3
+
+    db.put({'a': 2, 'b': 22})
+    db.put({'a': 3, 'b': 33})
+    db.put({'a': 1, 'b': 11})
+    db.define('b_by_a', yielder)
+    r = db.view('b_by_a')
+    r = list(r)
+    assert len(r) == 9
+    assert r[0] == {'id': 2, 'key': (1, 1), 'value': 11}
+    assert r[1] == {'id': 2, 'key': (1, 2), 'value': 22}
+    assert r[2] == {'id': 2, 'key': (1, 3), 'value': 33}
+    assert r[3] == {'id': 0, 'key': (2, 1), 'value': 22}
+    assert r[4] == {'id': 0, 'key': (2, 2), 'value': 44}
+    assert r[5] == {'id': 0, 'key': (2, 3), 'value': 66}
+    assert r[6] == {'id': 1, 'key': (3, 1), 'value': 33}
+    assert r[7] == {'id': 1, 'key': (3, 2), 'value': 66}
+    assert r[8] == {'id': 1, 'key': (3, 3), 'value': 99}
