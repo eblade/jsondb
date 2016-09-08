@@ -44,7 +44,7 @@ class Database:
         hex_name = '%016x' % (id)
         return os.path.join(hex_name[-2:], hex_name + '.json')
 
-    def add(self, o):
+    def put(self, o):
         with self.lock:
             id = self._next_id()
             path = os.path.join(

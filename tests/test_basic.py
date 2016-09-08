@@ -21,15 +21,15 @@ def test_init(db):
     assert db is not None
 
 
-def test_add(db):
-    o = db.add({'a': 1})
+def test_put(db):
+    o = db.put({'a': 1})
     assert '_id' in o.keys()
     assert o['_id'] is not None
     assert db.has(o['_id'])
 
 
 def test_get(db):
-    o = db.add({'a': 1})
+    o = db.put({'a': 1})
     new_id = o['_id']
     assert new_id is not None
     o = db.get(new_id)
@@ -41,10 +41,10 @@ def test_get(db):
 
 
 def test_get_2(db):
-    o1 = db.add({'a': 1})
+    o1 = db.put({'a': 1})
     new_id_1 = o1['_id']
     assert new_id_1 is not None
-    o2 = db.add({'b': 2})
+    o2 = db.put({'b': 2})
     new_id_2 = o2['_id']
     assert new_id_2 is not None
     o1 = db.get(new_id_1)
@@ -62,7 +62,7 @@ def test_get_2(db):
 
 
 def test_delete(db):
-    o = db.add({'a': 1})
+    o = db.put({'a': 1})
     new_id = o['_id']
     assert new_id is not None
     db.delete(new_id)
@@ -70,7 +70,7 @@ def test_delete(db):
 
 
 def test_update(db):
-    o = db.add({'a': 1})
+    o = db.put({'a': 1})
     new_id = o['_id']
     first_rev = o['_rev']
     assert first_rev is not None
@@ -86,11 +86,11 @@ def test_update(db):
     assert o['_rev'] == second_rev
 
 
-def test_view_just_add(db):
+def test_view_just_put(db):
     db.define('b_by_a', lambda o: {o['a']: o['b']})
-    db.add({'a': 2, 'b': 22})
-    db.add({'a': 3, 'b': 33})
-    db.add({'a': 1, 'b': 11})
+    db.put({'a': 2, 'b': 22})
+    db.put({'a': 3, 'b': 33})
+    db.put({'a': 1, 'b': 11})
     r = db.view('b_by_a')
     r = list(r)
     assert len(r) == 3
@@ -99,11 +99,11 @@ def test_view_just_add(db):
     assert r[2] == {'id': 1, 'key': 3, 'value': 33}
 
 
-def test_view_add_and_update_value(db):
+def test_view_put_and_update_value(db):
     db.define('b_by_a', lambda o: {o['a']: o['b']})
-    db.add({'a': 2, 'b': 22})
-    db.add({'a': 3, 'b': 33})
-    o1 = db.add({'a': 1, 'b': 11})
+    db.put({'a': 2, 'b': 22})
+    db.put({'a': 3, 'b': 33})
+    o1 = db.put({'a': 1, 'b': 11})
     o1['b'] = 1111
     db.update(o1)
     r = db.view('b_by_a')
@@ -114,11 +114,11 @@ def test_view_add_and_update_value(db):
     assert r[2] == {'id': 1, 'key': 3, 'value': 33}
 
 
-def test_view_add_and_delete(db):
+def test_view_put_and_delete(db):
     db.define('b_by_a', lambda o: {o['a']: o['b']})
-    o2 = db.add({'a': 2, 'b': 22})
-    db.add({'a': 3, 'b': 33})
-    db.add({'a': 1, 'b': 11})
+    o2 = db.put({'a': 2, 'b': 22})
+    db.put({'a': 3, 'b': 33})
+    db.put({'a': 1, 'b': 11})
     db.delete(o2['_id'])
     r = db.view('b_by_a')
     r = list(r)
@@ -128,9 +128,9 @@ def test_view_add_and_delete(db):
 
 
 def test_view_kickstart(db):
-    db.add({'a': 2, 'b': 22})
-    db.add({'a': 3, 'b': 33})
-    db.add({'a': 1, 'b': 11})
+    db.put({'a': 2, 'b': 22})
+    db.put({'a': 3, 'b': 33})
+    db.put({'a': 1, 'b': 11})
     db.define('b_by_a', lambda o: {o['a']: o['b']})
     r = db.view('b_by_a')
     r = list(r)
@@ -141,9 +141,9 @@ def test_view_kickstart(db):
 
 
 def test_view_by_key(db):
-    db.add({'a': 2, 'b': 22})
-    db.add({'a': 3, 'b': 33})
-    db.add({'a': 1, 'b': 11})
+    db.put({'a': 2, 'b': 22})
+    db.put({'a': 3, 'b': 33})
+    db.put({'a': 1, 'b': 11})
     db.define('b_by_a', lambda o: {o['a']: o['b']})
     r = list(db.view('b_by_a', key=2))
     assert len(r) == 1
@@ -152,10 +152,10 @@ def test_view_by_key(db):
 
 def test_view_by_key_two_values_same_key_before(db):
     db.define('b_by_a', lambda o: {o['a']: o['b']})
-    db.add({'a': 2, 'b': 22})
-    db.add({'a': 3, 'b': 33})
-    db.add({'a': 1, 'b': 11})
-    db.add({'a': 2, 'b': 44})
+    db.put({'a': 2, 'b': 22})
+    db.put({'a': 3, 'b': 33})
+    db.put({'a': 1, 'b': 11})
+    db.put({'a': 2, 'b': 44})
     r = list(db.view('b_by_a', key=2))
     assert len(r) == 2
     assert r[0] == {'id': 0, 'key': 2, 'value': 22}
@@ -163,10 +163,10 @@ def test_view_by_key_two_values_same_key_before(db):
 
 
 def test_view_by_key_two_values_same_key_after(db):
-    db.add({'a': 2, 'b': 22})
-    db.add({'a': 3, 'b': 33})
-    db.add({'a': 1, 'b': 11})
-    db.add({'a': 2, 'b': 44})
+    db.put({'a': 2, 'b': 22})
+    db.put({'a': 3, 'b': 33})
+    db.put({'a': 1, 'b': 11})
+    db.put({'a': 2, 'b': 44})
     db.define('b_by_a', lambda o: {o['a']: o['b']})
     r = list(db.view('b_by_a', key=2))
     assert len(r) == 2
@@ -175,9 +175,9 @@ def test_view_by_key_two_values_same_key_after(db):
 
 
 def test_view_by_startkey(db):
-    db.add({'a': 2, 'b': 22})
-    db.add({'a': 3, 'b': 33})
-    db.add({'a': 1, 'b': 11})
+    db.put({'a': 2, 'b': 22})
+    db.put({'a': 3, 'b': 33})
+    db.put({'a': 1, 'b': 11})
     db.define('b_by_a', lambda o: {o['a']: o['b']})
     r = list(db.view('b_by_a', startkey=2))
     assert len(r) == 2
@@ -186,9 +186,9 @@ def test_view_by_startkey(db):
 
 
 def test_view_by_endkey(db):
-    db.add({'a': 2, 'b': 22})
-    db.add({'a': 3, 'b': 33})
-    db.add({'a': 1, 'b': 11})
+    db.put({'a': 2, 'b': 22})
+    db.put({'a': 3, 'b': 33})
+    db.put({'a': 1, 'b': 11})
     db.define('b_by_a', lambda o: {o['a']: o['b']})
     r = list(db.view('b_by_a', endkey=2))
     assert len(r) == 2
