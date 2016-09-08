@@ -6,6 +6,7 @@ import threading
 import shutil
 import logging
 import blist
+import hashlib
 
 
 class Database:
@@ -40,13 +41,20 @@ class Database:
             f.write(str(current + 1))
         return current
 
-    def _get_object_filename(self, id):
-        hex_name = '%016x' % (id)
-        return os.path.join(hex_name[-2:], hex_name + '.json')
-
-    def put(self, o):
+    def set_next_id(self, id):
+        id = int(id)
         with self.lock:
-            id = self._next_id()
+            with open(self._id_counter_file, 'w') as f:
+                f.write(str(id))
+
+    def _get_object_filename(self, id):
+        hash_name = hashlib.sha224(str(id).encode('utf8')).hexdigest()
+        return os.path.join(hash_name[:2], hash_name[2:] + '.json')
+
+    def put(self, o, id=None):
+        with self.lock:
+            if id is None:
+                id = self._next_id()
             path = os.path.join(
                 self._object_folder,
                 self._get_object_filename(id)
@@ -59,6 +67,9 @@ class Database:
                 f.write(s.encode('utf8'))
             self._review(o, delete=True, add=True)
             return o
+
+    def __setitem__(self, key, o):
+        self.put(o, id=key)
 
     def has(self, id):
         with self.lock:
@@ -74,10 +85,16 @@ class Database:
                 self._object_folder,
                 self._get_object_filename(id)
             )
-            with open(path, 'rb') as f:
-                s = f.read().decode('utf8')
-                o = json.loads(s)
-                return o
+            try:
+                with open(path, 'rb') as f:
+                    s = f.read().decode('utf8')
+                    o = json.loads(s)
+                    return o
+            except FileNotFoundError:
+                raise KeyError('Key does not exist: ' + str(id))
+
+    def __getitem__(self, key):
+        return self.get(key)
 
     def delete(self, id):
         with self.lock:

@@ -194,3 +194,20 @@ def test_view_by_endkey(db):
     assert len(r) == 2
     assert r[0] == {'id': 2, 'key': 1, 'value': 11}
     assert r[1] == {'id': 0, 'key': 2, 'value': 22}
+
+
+def test_add_with_custom_keys(db):
+    db['a'] = {'a': 2, 'b': 22}
+    db[1] = {'a': 3, 'b': 33}
+    db[('a', 1)] = {'a': 1, 'b': 11}
+    assert db['a'] == {'_id': 'a', '_rev': 0, 'a': 2, 'b': 22}
+    assert db[1] == {'_id': 1, '_rev': 0, 'a': 3, 'b': 33}
+    assert db[('a', 1)] == {'_id': ['a', 1], '_rev': 0, 'a': 1, 'b': 11}
+
+
+def test_add_with_custom_keys_and_set_next_id(db):
+    db[10] = {'a': 3, 'b': 33}
+    db.set_next_id(20)
+    db[None] = {'a': 1, 'b': 11}
+    assert db[10] == {'_id': 10, '_rev': 0, 'a': 3, 'b': 33}
+    assert db[20] == {'_id': 20, '_rev': 0, 'a': 1, 'b': 11}
