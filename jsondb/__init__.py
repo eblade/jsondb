@@ -19,12 +19,12 @@ class Database:
         self._view_data = dict()
         self._object_folder = os.path.join(self.root, 'objects')
         self._id_counter_file = os.path.join(self.root, 'id_counter')
-        self.lock = threading.Lock()
+        self._lock = threading.Lock()
         self._setup()
 
     def destroy(self):
         logging.debug('Destroying JsonDB at %s', self.root)
-        with self.lock:
+        with self._lock:
             if self.root:
                 shutil.rmtree(self.root)
 
@@ -43,7 +43,7 @@ class Database:
 
     def set_next_id(self, id):
         id = int(id)
-        with self.lock:
+        with self._lock:
             with open(self._id_counter_file, 'w') as f:
                 f.write(str(id))
 
@@ -52,7 +52,7 @@ class Database:
         return os.path.join(hash_name[:2], hash_name[2:] + '.json')
 
     def put(self, o, id=None):
-        with self.lock:
+        with self._lock:
             if id is None:
                 id = self._next_id()
             path = os.path.join(
@@ -72,7 +72,7 @@ class Database:
         self.put(o, id=key)
 
     def has(self, id):
-        with self.lock:
+        with self._lock:
             path = os.path.join(
                 self._object_folder,
                 self._get_object_filename(id)
@@ -80,7 +80,7 @@ class Database:
             return os.path.exists(path)
 
     def get(self, id):
-        with self.lock:
+        with self._lock:
             path = os.path.join(
                 self._object_folder,
                 self._get_object_filename(id)
@@ -97,7 +97,7 @@ class Database:
         return self.get(key)
 
     def delete(self, id):
-        with self.lock:
+        with self._lock:
             path = os.path.join(
                 self._object_folder,
                 self._get_object_filename(id)
@@ -106,7 +106,7 @@ class Database:
             self._review({'_id': id}, delete=True)
 
     def update(self, o):
-        with self.lock:
+        with self._lock:
             path = os.path.join(
                 self._object_folder,
                 self._get_object_filename(o['_id'])
@@ -124,14 +124,14 @@ class Database:
             return o
 
     def define(self, view_name, fn):
-        with self.lock:
+        with self._lock:
             self._view_function[view_name] = fn
             self._view_data[view_name] = \
                 blist.sortedlist(key=view_key)
         self.reindex(views=[view_name])
 
     def reindex(self, views=all):
-        with self.lock:
+        with self._lock:
             logging.info("Generating views...")
             count = 0
             for name in sorted(self._view_function.keys()):
@@ -153,7 +153,7 @@ class Database:
         if key is not any and None not in (startkey, endkey):
             raise ValueError('Either key or startkey/endkey valid')
 
-        with self.lock:
+        with self._lock:
             view_data = self._view_data[view_name]
 
             if key is not any:
