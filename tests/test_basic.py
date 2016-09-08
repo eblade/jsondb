@@ -87,7 +87,7 @@ def test_update(db):
 
 
 def test_view_just_put(db):
-    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
     db.put({'a': 2, 'b': 22})
     db.put({'a': 3, 'b': 33})
     db.put({'a': 1, 'b': 11})
@@ -100,7 +100,7 @@ def test_view_just_put(db):
 
 
 def test_view_put_and_update_value(db):
-    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
     db.put({'a': 2, 'b': 22})
     db.put({'a': 3, 'b': 33})
     o1 = db.put({'a': 1, 'b': 11})
@@ -115,7 +115,7 @@ def test_view_put_and_update_value(db):
 
 
 def test_view_put_and_delete(db):
-    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
     o2 = db.put({'a': 2, 'b': 22})
     db.put({'a': 3, 'b': 33})
     db.put({'a': 1, 'b': 11})
@@ -131,7 +131,7 @@ def test_view_kickstart(db):
     db.put({'a': 2, 'b': 22})
     db.put({'a': 3, 'b': 33})
     db.put({'a': 1, 'b': 11})
-    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
     r = db.view('b_by_a')
     r = list(r)
     assert len(r) == 3
@@ -144,14 +144,14 @@ def test_view_by_key(db):
     db.put({'a': 2, 'b': 22})
     db.put({'a': 3, 'b': 33})
     db.put({'a': 1, 'b': 11})
-    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
     r = list(db.view('b_by_a', key=2))
     assert len(r) == 1
     assert r[0] == {'id': 0, 'key': 2, 'value': 22}
 
 
 def test_view_by_key_two_values_same_key_before(db):
-    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
     db.put({'a': 2, 'b': 22})
     db.put({'a': 3, 'b': 33})
     db.put({'a': 1, 'b': 11})
@@ -167,7 +167,7 @@ def test_view_by_key_two_values_same_key_after(db):
     db.put({'a': 3, 'b': 33})
     db.put({'a': 1, 'b': 11})
     db.put({'a': 2, 'b': 44})
-    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
     r = list(db.view('b_by_a', key=2))
     assert len(r) == 2
     assert r[0] == {'id': 0, 'key': 2, 'value': 22}
@@ -178,7 +178,7 @@ def test_view_by_startkey(db):
     db.put({'a': 2, 'b': 22})
     db.put({'a': 3, 'b': 33})
     db.put({'a': 1, 'b': 11})
-    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
     r = list(db.view('b_by_a', startkey=2))
     assert len(r) == 2
     assert r[0] == {'id': 0, 'key': 2, 'value': 22}
@@ -189,7 +189,7 @@ def test_view_by_endkey(db):
     db.put({'a': 2, 'b': 22})
     db.put({'a': 3, 'b': 33})
     db.put({'a': 1, 'b': 11})
-    db.define('b_by_a', lambda o: {o['a']: o['b']})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
     r = list(db.view('b_by_a', endkey=2))
     assert len(r) == 2
     assert r[0] == {'id': 2, 'key': 1, 'value': 11}
@@ -211,3 +211,20 @@ def test_add_with_custom_keys_and_set_next_id(db):
     db[None] = {'a': 1, 'b': 11}
     assert db[10] == {'_id': 10, '_rev': 0, 'a': 3, 'b': 33}
     assert db[20] == {'_id': 20, '_rev': 0, 'a': 1, 'b': 11}
+
+
+def test_include_docs(db):
+    db.define('by_id', lambda o: (o['_id'], 1))
+    db[1] = {1: 11}
+    db[2] = {2: 12}
+    db[5] = {5: 15}
+    db[7] = {7: 17}
+    r = list(db.view('by_id', include_docs=True))
+    assert r[0] == {'id': 1, 'key': 1, 'value': 1,
+                    'doc': {'_id': 1, '_rev': 0, '1': 11}}
+    assert r[1] == {'id': 2, 'key': 2, 'value': 1,
+                    'doc': {'_id': 2, '_rev': 0, '2': 12}}
+    assert r[2] == {'id': 5, 'key': 5, 'value': 1,
+                    'doc': {'_id': 5, '_rev': 0, '5': 15}}
+    assert r[3] == {'id': 7, 'key': 7, 'value': 1,
+                    'doc': {'_id': 7, '_rev': 0, '7': 17}}

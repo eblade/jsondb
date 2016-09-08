@@ -63,7 +63,7 @@ class Database:
             o['_id'] = id
             o['_rev'] = 0
             with open(path, 'wb') as f:
-                s = json.dumps(o, indent=2, sort_keys=True)
+                s = json.dumps(o, indent=2)
                 f.write(s.encode('utf8'))
             self._review(o, delete=True, add=True)
             return o
@@ -81,17 +81,20 @@ class Database:
 
     def get(self, id):
         with self._lock:
-            path = os.path.join(
-                self._object_folder,
-                self._get_object_filename(id)
-            )
-            try:
-                with open(path, 'rb') as f:
-                    s = f.read().decode('utf8')
-                    o = json.loads(s)
-                    return o
-            except FileNotFoundError:
-                raise KeyError('Key does not exist: ' + str(id))
+            return self._get(id)
+
+    def _get(self, id):
+        path = os.path.join(
+            self._object_folder,
+            self._get_object_filename(id)
+        )
+        try:
+            with open(path, 'rb') as f:
+                s = f.read().decode('utf8')
+                o = json.loads(s)
+                return o
+        except FileNotFoundError:
+            raise KeyError('Key does not exist: ' + str(id))
 
     def __getitem__(self, key):
         return self.get(key)
@@ -149,7 +152,8 @@ class Database:
                             count += 1
             logging.info("Read %i objects.", count)
 
-    def view(self, view_name, key=any, startkey=None, endkey=any, expand=False):
+    def view(self, view_name, key=any, startkey=None, endkey=any,
+             include_docs=False):
         if key is not any and None not in (startkey, endkey):
             raise ValueError('Either key or startkey/endkey valid')
 
@@ -183,6 +187,9 @@ class Database:
                 if key is not any:
                     if key_ref != view_key(v):
                         break
+                if include_docs:
+                    v = dict(v)
+                    v['doc'] = self._get(v['id'])
                 yield v
 
     def _review(self, o, delete=False, add=False, views=all):
@@ -208,13 +215,13 @@ class Database:
                 r = fn(o)
                 if r is None:
                     continue
-                for k, v in r.items():
-                    d = {
-                        'id': o['_id'],
-                        'key': k,
-                        'value': v,
-                    }
-                    view_data.add(d)
+                k, v = r
+                d = {
+                    'id': o['_id'],
+                    'key': k,
+                    'value': v,
+                }
+                view_data.add(d)
 
 
 class Conflict(Exception):
