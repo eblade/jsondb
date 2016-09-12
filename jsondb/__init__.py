@@ -173,7 +173,13 @@ class Database:
                     startindex = len(view_data)
                 else:
                     startkey = {'key': startkey}
-                    startindex = view_data.index(startkey)
+                    l = view_data.bisect_left(startkey)
+                    r = view_data.bisect_right(startkey)
+                    if l == r:
+                        startindex = l
+                    else:
+                        startindex = l
+                    logging.info('l=%d, r=%d -> startindex=%d', l, r, startindex)
 
                 if endkey is None:
                     endindex = 0
@@ -181,7 +187,13 @@ class Database:
                     endindex = len(view_data)
                 else:
                     endkey = {'key': endkey}
-                    endindex = view_data.index(endkey) + 1
+                    l = view_data.bisect_left(endkey)
+                    r = view_data.bisect_right(endkey)
+                    if l == r:
+                        endindex = l
+                    else:
+                        endindex = r
+                    logging.info('l=%d, r=%d -> endindex=%d', l, r, endindex)
 
             for v in view_data[startindex:endindex]:
                 if key is not any:

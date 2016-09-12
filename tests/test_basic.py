@@ -185,12 +185,34 @@ def test_view_by_startkey(db):
     assert r[1] == {'id': 1, 'key': 3, 'value': 33}
 
 
+def test_view_by_startkey_after(db):
+    db.put({'a': 3, 'b': 33})
+    db.put({'a': 4, 'b': 44})
+    db.put({'a': 1, 'b': 11})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
+    r = list(db.view('b_by_a', startkey=2))
+    assert len(r) == 2
+    assert r[0] == {'id': 0, 'key': 3, 'value': 33}
+    assert r[1] == {'id': 1, 'key': 4, 'value': 44}
+
+
 def test_view_by_endkey(db):
     db.put({'a': 2, 'b': 22})
     db.put({'a': 3, 'b': 33})
     db.put({'a': 1, 'b': 11})
     db.define('b_by_a', lambda o: (o['a'], o['b']))
     r = list(db.view('b_by_a', endkey=2))
+    assert len(r) == 2
+    assert r[0] == {'id': 2, 'key': 1, 'value': 11}
+    assert r[1] == {'id': 0, 'key': 2, 'value': 22}
+
+
+def test_view_by_endkey_after(db):
+    db.put({'a': 2, 'b': 22})
+    db.put({'a': 4, 'b': 44})
+    db.put({'a': 1, 'b': 11})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
+    r = list(db.view('b_by_a', endkey=3))
     assert len(r) == 2
     assert r[0] == {'id': 2, 'key': 1, 'value': 11}
     assert r[1] == {'id': 0, 'key': 2, 'value': 22}
