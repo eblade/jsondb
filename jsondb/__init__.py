@@ -51,25 +51,9 @@ class Database:
         hash_name = hashlib.sha224(str(id).encode('utf8')).hexdigest()
         return os.path.join(hash_name[:2], hash_name[2:] + '.json')
 
-    def put(self, o, id=None):
-        with self._lock:
-            if id is None:
-                id = self._next_id()
-            path = os.path.join(
-                self._object_folder,
-                self._get_object_filename(id)
-            )
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            o['_id'] = id
-            o['_rev'] = 0
-            with open(path, 'wb') as f:
-                s = json.dumps(o, indent=2)
-                f.write(s.encode('utf8'))
-            self._review(o, delete=True, add=True)
-            return o
-
-    def __setitem__(self, key, o):
-        self.put(o, id=key)
+    def __setitem__(self, id, o):
+        o['_id'] = id
+        self.save(o)
 
     def has(self, id):
         with self._lock:
@@ -108,21 +92,41 @@ class Database:
             os.remove(path)
             self._review({'_id': id}, delete=True)
 
-    def update(self, o):
+    def save(self, o):
         with self._lock:
+            id = o.get('_id')
+            if id is None:
+                id = self._next_id()
+                o['_id'] = id
+                o['_rev'] = 0
+
+            if '_rev' not in o:
+                o['_rev'] = 0
+
             path = os.path.join(
                 self._object_folder,
-                self._get_object_filename(o['_id'])
+                self._get_object_filename(id)
             )
-            with open(path, 'rb') as f:
-                s = f.read().decode('utf8')
-                o_current = json.loads(s)
-            if o['_rev'] != o_current['_rev']:
-                raise Conflict
-            o['_rev'] += 1
+
+            try:
+                with open(path, 'rb') as f:
+                    s = f.read().decode('utf8')
+                    o_current = json.loads(s)
+            except IOError:
+                o_current = None
+
+            if o_current is not None:
+                current_rev = int(o_current['_rev'])
+                challenge_rev = int(o['_rev'])
+                if current_rev != challenge_rev:
+                    raise Conflict
+                o['_rev'] = current_rev + 1
+
+            os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'wb') as f:
-                s = json.dumps(o, indent=2, sort_keys=True)
+                s = json.dumps(o, indent=2)
                 f.write(s.encode('utf8'))
+
             self._review(o, delete=True, add=True)
             return o
 
@@ -135,7 +139,7 @@ class Database:
 
     def reindex(self, views=all):
         with self._lock:
-            logging.info("Generating views...")
+            logging.info("Generating views (%s)", "all" if views is all else ', '.join(views))
             count = 0
             for name in sorted(self._view_function.keys()):
                 if views is all or name in views:
