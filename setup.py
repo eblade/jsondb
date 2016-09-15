@@ -30,6 +30,7 @@ setup(
                   % (name_, version_)),
     packages=packages_,
     install_requires=[
+        "blist>=1.3.6",
     ],
     classifiers=classifiers,
 )

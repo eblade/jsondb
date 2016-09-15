@@ -162,7 +162,7 @@ class Database:
 
             if key is not any:
                 key = {'key': key}
-                startindex = view_data.index(key)
+                startindex = view_data.bisect_left(key)
                 key_ref = view_key(key)
                 endindex = None
 

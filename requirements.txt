@@ -1,1 +1,1 @@
-https://github.com/eblade/blist/archive/master.zip
+blist>=1.3.6
