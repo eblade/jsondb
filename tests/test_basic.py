@@ -274,3 +274,34 @@ def test_yielding_mapping_function(db):
     assert r[6] == {'id': 1, 'key': (3, 1), 'value': 33}
     assert r[7] == {'id': 1, 'key': (3, 2), 'value': 66}
     assert r[8] == {'id': 1, 'key': (3, 3), 'value': 99}
+
+
+def test_reduce_by_group(db):
+    def sum_per(field, values):
+        result = {}
+        for value in values:
+            v = value.get(field)
+            if v in result:
+                result[v] += 1
+            else:
+                result[v] = 1
+        return result
+
+    db.define('test',
+              lambda o: (o['category'], {'state': o['state']}),
+              lambda keys, values, rereduce: sum_per('state', values))
+    db.save({'category': 'a', 'state': 'new'})
+    db.save({'category': 'b', 'state': 'new'})
+    db.save({'category': 'a', 'state': 'old'})
+    db.save({'category': 'b', 'state': 'new'})
+    db.save({'category': 'a', 'state': 'old'})
+    db.save({'category': 'a', 'state': 'new'})
+    db.save({'category': 'c', 'state': 'new'})
+    db.save({'category': 'c', 'state': 'old'})
+    db.save({'category': 'a', 'state': 'new'})
+    db.save({'category': 'a', 'state': 'new'})
+    r = list(db.view('test', group=True))
+    print(r)
+    assert r[0] == {'key': 'a', 'value': {'new': 4, 'old': 2}}
+    assert r[1] == {'key': 'b', 'value': {'new': 2}}
+    assert r[2] == {'key': 'c', 'value': {'new': 1, 'old': 1}}

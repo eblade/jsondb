@@ -15,7 +15,8 @@ class Database:
             raise ValueError('root cannot be None')
         logging.debug('Initializing JsonDB at %s', root)
         self.root = root
-        self._view_function = dict()
+        self._view_map_function = dict()
+        self._view_reduce_function = dict()
         self._view_data = dict()
         self._object_folder = os.path.join(self.root, 'objects')
         self._id_counter_file = os.path.join(self.root, 'id_counter')
@@ -130,9 +131,10 @@ class Database:
             self._review(o, delete=True, add=True)
             return o
 
-    def define(self, view_name, fn):
+    def define(self, view_name, map_fn, reduce_fn=None):
         with self._lock:
-            self._view_function[view_name] = fn
+            self._view_map_function[view_name] = map_fn
+            self._view_reduce_function[view_name] = reduce_fn
             self._view_data[view_name] = \
                 blist.sortedlist(key=view_key)
         self.reindex(views=[view_name])
@@ -141,7 +143,7 @@ class Database:
         with self._lock:
             logging.info("Generating views (%s)", "all" if views is all else ', '.join(views))
             count = 0
-            for name in sorted(self._view_function.keys()):
+            for name in sorted(self._view_map_function.keys()):
                 if views is all or name in views:
                     self._view_data[name] = \
                         blist.sortedlist(key=view_key)
@@ -157,7 +159,7 @@ class Database:
             logging.info("Read %i objects.", count)
 
     def view(self, view_name, key=any, startkey=None, endkey=any,
-             include_docs=False):
+             include_docs=False, group=False, no_reduce=False):
         if key is not any and None not in (startkey, endkey):
             raise ValueError('Either key or startkey/endkey valid')
 
@@ -168,7 +170,7 @@ class Database:
                 key = {'key': key}
                 startindex = view_data.bisect_left(key)
                 key_ref = view_key(key)
-                endindex = None
+                endindex = len(view_data)
 
             else:
                 if startkey is None:
@@ -183,7 +185,6 @@ class Database:
                         startindex = l
                     else:
                         startindex = l
-                    logging.info('l=%d, r=%d -> startindex=%d', l, r, startindex)
 
                 if endkey is None:
                     endindex = 0
@@ -197,16 +198,35 @@ class Database:
                         endindex = l
                     else:
                         endindex = r
-                    logging.info('l=%d, r=%d -> endindex=%d', l, r, endindex)
 
-            for v in view_data[startindex:endindex]:
-                if key is not any:
-                    if key_ref != view_key(v):
-                        break
-                if include_docs:
-                    v = dict(v)
-                    v['doc'] = self._get(v['id'])
-                yield v
+            reduce_fn = self._view_reduce_function[view_name]
+            if reduce_fn is None or no_reduce:
+                for v in view_data[startindex:endindex]:
+                    if key is not any:
+                        if key_ref != view_key(v):
+                            break
+                    if include_docs:
+                        v = dict(v)
+                        v['doc'] = self._get(v['id'])
+                    yield v
+            else:
+                if group:
+                    last_key = None
+                    values = []
+                    for v in view_data[startindex:endindex]:
+                        if key is not any:
+                            if key_ref != view_key(v):
+                                break
+                        this_key = v['key']
+                        if last_key is not None and this_key != last_key:
+                            yield {'key': last_key, 'value': reduce_fn([last_key], values, False)}
+                            values = []
+                        last_key = this_key
+                        values.append(v['value'])
+                    if len(values) > 0:
+                        yield {'key': this_key, 'value': reduce_fn([this_key], values, False)}
+                else:
+                    raise NotImplemented('Reduce without grouping not implemented')
 
     def _review(self, o, delete=False, add=False, views=all):
         id = o['_id']
@@ -219,7 +239,7 @@ class Database:
                 'value': v,
             }
 
-        for name, fn in self._view_function.items():
+        for name, fn in self._view_map_function.items():
             if views is not all and name not in views:
                 continue
             try:
