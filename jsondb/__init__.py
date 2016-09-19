@@ -18,6 +18,7 @@ class Database:
         self._view_map_function = dict()
         self._view_reduce_function = dict()
         self._view_data = dict()
+        self._id_view_cache = dict()
         self._object_folder = os.path.join(self.root, 'objects')
         self._id_counter_file = os.path.join(self.root, 'id_counter')
         self._lock = threading.Lock()
@@ -101,11 +102,6 @@ class Database:
                 o['_id'] = id
                 o['_rev'] = 0
 
-            if '_rev' not in o:
-                o['_rev'] = 0
-            elif o['_rev'] is None:
-                o['_rev'] = 0
-
             path = os.path.join(
                 self._object_folder,
                 self._get_object_filename(id)
@@ -124,6 +120,11 @@ class Database:
                 if current_rev != challenge_rev:
                     raise Conflict
                 o['_rev'] = current_rev + 1
+            else:
+                if '_rev' not in o:
+                    o['_rev'] = 0
+                elif o['_rev'] is None:
+                    o['_rev'] = 0
 
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'wb') as f:
@@ -158,12 +159,10 @@ class Database:
                             o = json.loads(s)
                             self._review(o, add=True, views=views)
                             count += 1
-            logging.info("Read %i objects.", count)
+            logging.info("Indexed %i object%s.", count, 's' if count != 1 else '')
 
     def view(self, view_name, key=any, startkey=None, endkey=any,
              include_docs=False, group=False, no_reduce=False):
-        if key is not any and None not in (startkey, endkey):
-            raise ValueError('Either key or startkey/endkey valid')
 
         with self._lock:
             view_data = self._view_data[view_name]
@@ -246,27 +245,40 @@ class Database:
                 continue
             try:
                 view_data = self._view_data[name]
+                id_view_cache = self._id_view_cache[name]
             except KeyError:
                 view_data = blist.sortedlist(key=view_key)
                 self._view_data[name] = view_data
+                id_view_cache = dict()
+                self._id_view_cache[name] = id_view_cache
 
-            if delete:
-                to_delete = []
-                for index, v in enumerate(view_data):
-                    if v['id'] == id:
-                        to_delete.append(index)
-                for index in reversed(to_delete):
-                    del view_data[index]
+            if delete and id in id_view_cache.keys():
+                for v in id_view_cache[id]:
+                    try:
+                        view_data.remove(v)
+                    except ValueError:
+                        pass
+                del id_view_cache[id]
 
             if add:
+                try:
+                    this_id_view_cache = id_view_cache[id]
+                except KeyError:
+                    this_id_view_cache = list()
+                    id_view_cache[id] = this_id_view_cache
+
                 rows = fn(o)
                 if rows is None:
                     continue
                 if hasattr(rows, '__next__'):
                     for row in rows:
-                        view_data.add(create_view_data(o, row))
+                        v = create_view_data(o, row)
+                        view_data.add(v)
+                        this_id_view_cache.append(v)
                 else:
-                    view_data.add(create_view_data(o, rows))
+                    v = create_view_data(o, rows)
+                    view_data.add(v)
+                    this_id_view_cache.append(v)
 
 
 class Conflict(Exception):
