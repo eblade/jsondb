@@ -103,6 +103,8 @@ class Database:
 
             if '_rev' not in o:
                 o['_rev'] = 0
+            elif o['_rev'] is None:
+                o['_rev'] = 0
 
             path = os.path.join(
                 self._object_folder,

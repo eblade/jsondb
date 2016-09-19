@@ -150,6 +150,16 @@ def test_view_by_key(db):
     assert r[0] == {'id': 0, 'key': 2, 'value': 22}
 
 
+def test_view_by_key_string(db):
+    db.save({'a': '2', 'b': 22})
+    db.save({'a': '3', 'b': 33})
+    db.save({'a': '1', 'b': 11})
+    db.define('b_by_a', lambda o: (o['a'], o['b']))
+    r = list(db.view('b_by_a', key='2'))
+    assert len(r) == 1
+    assert r[0] == {'id': 0, 'key': '2', 'value': 22}
+
+
 def test_view_by_key_two_values_same_key_before(db):
     db.define('b_by_a', lambda o: (o['a'], o['b']))
     db.save({'a': 2, 'b': 22})
