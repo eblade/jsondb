@@ -46,9 +46,12 @@ class LookupTable:
             self.index(*index)
 
     def index(self, key, value):
-        self._index[key] = {
+        index_name = '%s2%s' % (str(key), str(value))
+        print(index_name)
+        self._index[index_name] = {
             row[key]: row[value] for row in self.data
         }
+        return index_name
 
     def __getitem__(self, key):
         return self._index[key.start].get(key.stop)
