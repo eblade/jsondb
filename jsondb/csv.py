@@ -39,19 +39,25 @@ class open:
 
 
 class LookupTable:
-    def __init__(self, csv, *indices):
+    def __init__(self, csv, *indices, **aliases):
         self.data = list(csv)
         self._index = {}
+        if aliases:
+            for row in self.data:
+                for alias, fn in aliases.items():
+                    row[alias] = fn(row)
         for index in indices:
             self.index(*index)
 
     def index(self, key, value):
         index_name = '%s2%s' % (str(key), str(value))
-        print(index_name)
         self._index[index_name] = {
             row[key]: row[value] for row in self.data
         }
         return index_name
 
     def __getitem__(self, key):
-        return self._index[key.start].get(key.stop)
+        if isinstance(key, slice):
+            return self._index[key.start].get(key.stop)
+        else:
+            return self._index[key]
