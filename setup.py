@@ -4,7 +4,7 @@
 from setuptools import setup
 
 name_ = 'jsondb'
-version_ = '0.0.1'
+version_ = '0.1.0'
 packages_ = [
     'jsondb',
 ]
