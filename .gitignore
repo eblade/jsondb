@@ -1,6 +1,7 @@
-.pyc
+*.pyc
 __pycache__
 .~*
 ~*
 *.sw?
 .cache
+*.egg-info
