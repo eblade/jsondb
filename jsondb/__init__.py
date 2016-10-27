@@ -30,6 +30,14 @@ class Database:
             if self.root:
                 shutil.rmtree(self.root)
 
+    def clear(self):
+        logging.debug('Clear JsonDB at %s', self.root)
+        with self._lock:
+            shutil.rmtree(self._object_folder)
+            self._view_data = {view: blist.sortedlist()
+                               for view in self._view_data.keys()}
+            self._id_view_cache = dict()
+
     def _setup(self):
         os.makedirs(self._object_folder, exist_ok=True)
 
