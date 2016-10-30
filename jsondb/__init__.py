@@ -135,8 +135,8 @@ class Database:
                     o['_rev'] = 0
 
             os.makedirs(os.path.dirname(path), exist_ok=True)
+            s = json.dumps(o, indent=2)
             with open(path, 'wb') as f:
-                s = json.dumps(o, indent=2)
                 f.write(s.encode('utf8'))
 
             self._review(o, delete=True, add=True)
