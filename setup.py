@@ -4,7 +4,7 @@
 from setuptools import setup
 
 name_ = 'jsondb'
-version_ = '0.1.0'
+version_ = '0.2.0'
 packages_ = [
     'jsondb',
 ]
@@ -23,7 +23,7 @@ setup(
     version=version_,
     author='Johan Egneblad',
     author_email='johan@DELETEMEegneblad.se',
-    description='JSON serializable objects',
+    description='JSON based document database',
     license="MIT",
     url='https://github.com/eblade/'+name_,
     download_url=('https://github.com/eblade/%s/archive/v%s.tar.gz'

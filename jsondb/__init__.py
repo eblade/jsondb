@@ -9,6 +9,11 @@ import blist
 import hashlib
 
 
+__version__ = '0.2.0'
+__author__ = 'Johan Egneblad <johan@egneblad.com>'
+__all__ = ['Database', 'Conflict']
+
+
 class Database:
     def __init__(self, root=None):
         if root is None:
