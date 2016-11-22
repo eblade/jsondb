@@ -315,3 +315,42 @@ def test_reduce_by_group(db):
     assert r[0] == {'key': 'a', 'value': {'new': 4, 'old': 2}}
     assert r[1] == {'key': 'b', 'value': {'new': 2}}
     assert r[2] == {'key': 'c', 'value': {'new': 1, 'old': 1}}
+
+
+def test_skip(db):
+    db.define('by_id', lambda o: (o['_id'], 1))
+    db[1] = {1: 11}
+    db[2] = {2: 12}
+    db[5] = {5: 15}
+    db[7] = {7: 17}
+    r = list(db.view('by_id', include_docs=True, skip=2))
+    assert r[0] == {'id': 5, 'key': 5, 'value': 1,
+                    'doc': {'_id': 5, '_rev': 0, '5': 15}}
+    assert r[1] == {'id': 7, 'key': 7, 'value': 1,
+                    'doc': {'_id': 7, '_rev': 0, '7': 17}}
+
+
+def test_limit(db):
+    db.define('by_id', lambda o: (o['_id'], 1))
+    db[1] = {1: 11}
+    db[2] = {2: 12}
+    db[5] = {5: 15}
+    db[7] = {7: 17}
+    r = list(db.view('by_id', include_docs=True, limit=2))
+    assert r[0] == {'id': 1, 'key': 1, 'value': 1,
+                    'doc': {'_id': 1, '_rev': 0, '1': 11}}
+    assert r[1] == {'id': 2, 'key': 2, 'value': 1,
+                    'doc': {'_id': 2, '_rev': 0, '2': 12}}
+
+
+def test_skip_and_limit(db):
+    db.define('by_id', lambda o: (o['_id'], 1))
+    db[1] = {1: 11}
+    db[2] = {2: 12}
+    db[5] = {5: 15}
+    db[7] = {7: 17}
+    r = list(db.view('by_id', include_docs=True, skip=1, limit=2))
+    assert r[0] == {'id': 2, 'key': 2, 'value': 1,
+                    'doc': {'_id': 2, '_rev': 0, '2': 12}}
+    assert r[1] == {'id': 5, 'key': 5, 'value': 1,
+                    'doc': {'_id': 5, '_rev': 0, '5': 15}}

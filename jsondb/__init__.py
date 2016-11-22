@@ -170,7 +170,8 @@ class Database:
             logging.info("Indexed %i object%s.", count, 's' if count != 1 else '')
 
     def view(self, view_name, key=any, startkey=None, endkey=any,
-             include_docs=False, group=False, no_reduce=False):
+             include_docs=False, group=False, no_reduce=False,
+             skip=0, limit=None):
 
         with self._lock:
             view_data = self._view_data[view_name]
@@ -210,10 +211,15 @@ class Database:
 
             reduce_fn = self._view_reduce_function[view_name]
             if reduce_fn is None or no_reduce:
+                counter = 0
                 for v in view_data[startindex:endindex]:
+                    counter += 1
+                    print(counter, skip)
                     if key is not any:
                         if key_ref != view_key(v):
                             break
+                    if counter <= skip:
+                        continue
                     if include_docs:
                         v = dict(v)
                         v['doc'] = self._get(v['id'])
