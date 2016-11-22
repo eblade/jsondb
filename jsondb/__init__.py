@@ -214,7 +214,6 @@ class Database:
                 counter = 0
                 for v in view_data[startindex:endindex]:
                     counter += 1
-                    print(counter, skip)
                     if key is not any:
                         if key_ref != view_key(v):
                             break
