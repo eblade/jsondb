@@ -27,7 +27,7 @@ Installation
 
 You can `pip` (python 3) install this Github repository or a tag, like this:
 
-    $pip install https://github.com/eblade/jsondb/archive/0.1.tar.gz
+    $pip install https://github.com/eblade/jsondb/archive/0.2.tar.gz
 
 
 This will also install `blist` which is used to get the views faster.
