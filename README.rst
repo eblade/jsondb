@@ -124,9 +124,9 @@ not matter if the view is defined before or after the documents are
 created, as the documents will be placed in the index ad hoc. They
 will also be deleted that way. This means, for performance:
 
-- Adding a document is O(log x)
-- Finding a document is O(log x)
-- Deleting a document is O(log x)
+- Adding a document is O(log n)
+- Finding a document is O(log n)
+- Deleting a document is O(log n)
 
 So this scales quite well as long as the index fits in memory (the
 actual documents do not need to fit in memory, however). By the nature
