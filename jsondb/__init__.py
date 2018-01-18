@@ -129,6 +129,10 @@ class Database:
 
             if o_current is not None:
                 current_rev = int(o_current['_rev'])
+                if '_rev' not in o:
+                    raise Conflict
+                if o['_rev'] is None:
+                    raise Conflict
                 challenge_rev = int(o['_rev'])
                 if current_rev != challenge_rev:
                     raise Conflict
