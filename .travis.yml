@@ -1,6 +1,6 @@
 language: python
 python:
-  - "3.5.1"
+  - "3.7.4"
 install:
   - "pip install pytest pyflakes pip pep8 coverage pytest-pep8 pytest-cov pytest-flakes blist"
   - "python setup.py install"
