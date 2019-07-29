@@ -237,14 +237,6 @@ def test_add_with_custom_keys(db):
     assert db[('a', 1)] == {'_id': ['a', 1], '_rev': 0, 'a': 1, 'b': 11}
 
 
-def test_add_with_custom_keys_and_set_next_id(db):
-    db[10] = {'a': 3, 'b': 33}
-    db.set_next_id(20)
-    db[None] = {'a': 1, 'b': 11}
-    assert db[10] == {'_id': 10, '_rev': 0, 'a': 3, 'b': 33}
-    assert db[20] == {'_id': 20, '_rev': 0, 'a': 1, 'b': 11}
-
-
 def test_include_docs(db):
     db.define('by_id', lambda o: (o['_id'], 1))
     db[1] = {1: 11}

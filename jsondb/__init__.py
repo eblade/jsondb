@@ -15,11 +15,14 @@ __all__ = ['Database', 'Conflict']
 
 
 class Database:
-    def __init__(self, root=None):
+    def __init__(self, root=None, id_generator=None, filename_hasher=None, logger=None):
         if root is None:
             raise ValueError('root cannot be None')
-        logging.debug('Initializing JsonDB at %s', root)
+        self.logger = logger or logging.getLogger('jsondb')
+        self.logger.debug('Initializing JsonDB at %s', root)
         self.root = root
+        self._id_generator = id_generator or self._default_id_generator
+        self._filename_hasher = filename_hasher or self._default_filename_hasher
         self._view_map_function = dict()
         self._view_reduce_function = dict()
         self._view_data = dict()
@@ -30,13 +33,13 @@ class Database:
         self._setup()
 
     def destroy(self):
-        logging.debug('Destroying JsonDB at %s', self.root)
+        self.logger.debug('Destroying JsonDB at %s', self.root)
         with self._lock:
             if self.root:
                 shutil.rmtree(self.root)
 
     def clear(self):
-        logging.debug('Clear JsonDB at %s', self.root)
+        self.logger.debug('Clear JsonDB at %s', self.root)
         with self._lock:
             shutil.rmtree(self._object_folder)
             self._view_data = {view: blist.sortedlist()
@@ -47,6 +50,9 @@ class Database:
         os.makedirs(self._object_folder, exist_ok=True)
 
     def _next_id(self):
+        return self._id_generator()
+
+    def _default_id_generator(self):
         try:
             with open(self._id_counter_file, 'r') as f:
                 current = int(f.readline())
@@ -56,13 +62,10 @@ class Database:
             f.write(str(current + 1))
         return current
 
-    def set_next_id(self, id):
-        id = int(id)
-        with self._lock:
-            with open(self._id_counter_file, 'w') as f:
-                f.write(str(id))
-
     def _get_object_filename(self, id):
+        return self._filename_hasher(id)
+
+    def _default_filename_hasher(self, id):
         hash_name = hashlib.sha224(str(id).encode('utf8')).hexdigest()
         return os.path.join(hash_name[:2], hash_name[2:] + '.json')
 
@@ -161,7 +164,7 @@ class Database:
 
     def reindex(self, views=all):
         with self._lock:
-            logging.info("Generating views (%s)", "all" if views is all else ', '.join(views))
+            self.logger.info("Generating views (%s)", "all" if views is all else ', '.join(views))
             count = 0
             for name in sorted(self._view_map_function.keys()):
                 if views is all or name in views:
@@ -176,7 +179,7 @@ class Database:
                             o = json.loads(s)
                             self._review(o, add=True, views=views)
                             count += 1
-            logging.info("Indexed %i object%s.", count, 's' if count != 1 else '')
+            self.logger.info("Indexed %i object%s.", count, 's' if count != 1 else '')
 
     def view(self, view_name, key=any, startkey=None, endkey=any,
              include_docs=False, group=False, no_reduce=False,
@@ -249,7 +252,7 @@ class Database:
                     if len(values) > 0:
                         yield {'key': this_key, 'value': reduce_fn([this_key], values, False)}
                 else:
-                    raise NotImplemented('Reduce without grouping not implemented')
+                    raise NotImplementedError('Reduce without grouping not implemented')
 
     def _review(self, o, delete=False, add=False, views=all):
         id = o['_id']
