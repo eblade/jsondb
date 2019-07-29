@@ -27,7 +27,7 @@ Installation
 
 You can `pip` (python 3) install this Github repository or a tag, like this:
 
-    $pip install https://github.com/eblade/jsondb/archive/0.2.tar.gz
+    $pip install lindh-jsondb
 
 
 This will also install `blist` which is used to get the views faster.
@@ -41,7 +41,7 @@ To create a new database (a table if you think in relation database terms):
 
 .. code:: python
 
-    >>> from jsondb import Database
+    >>> from lindh.jsondb import Database
     >>> db = Database('/tmp/cars')
     >>> db.clear() # for doctest purposes
 
@@ -80,7 +80,7 @@ looks like when it comes back:
 
 As you can see, the structure closely mimic that of CouchDB, with the
 ``_id`` and ``_rev`` fields. The ``_rev`` field is important to keep intact
-as updated requires it to be the latest (otherwise a ``jsondb.Conflict``
+as updated requires it to be the latest (otherwise a ``lindh.jsondb.Conflict``
 is raised). To update, it's quite easy to use save (but index-based
 setting also works):
 
@@ -189,7 +189,7 @@ Further Reading
   examples. Look into ``images6/system.py`` for instance to see how
   the views are set up.
 
-- Also the lib works quite well together with its sister, ``jsonobject``
+- Also the lib works quite well together with its sister, ``lindh-jsonobject``
   which is a Django-inspired serialization/deserialization lib for
   complex python objects and json. It can be found here:
   https://github.com/eblade/jsonobject.
@@ -198,4 +198,4 @@ Further Reading
 Author
 ------
 
-``jsondb`` is written and maintained by Johan Egneblad <johan@egneblad.se>.
+``lindh.jsondb`` is written and maintained by Johan Egneblad <johan@egneblad.se>.

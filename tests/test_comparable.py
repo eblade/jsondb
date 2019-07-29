@@ -1,5 +1,5 @@
 import pytest
-from jsondb import Comparable
+from lindh.jsondb import Comparable
 
 
 @pytest.mark.parametrize('a,b,expected', [

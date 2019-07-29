@@ -1,4 +1,4 @@
-from jsondb import csv
+from lindh.jsondb import csv
 
 
 def test_read_csv():

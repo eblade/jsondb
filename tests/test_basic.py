@@ -1,7 +1,7 @@
 import pytest
 import logging
 import tempfile
-import jsondb
+from lindh import jsondb
 
 
 # Logging
